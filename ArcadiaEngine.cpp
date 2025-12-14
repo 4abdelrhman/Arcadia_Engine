@@ -65,7 +65,7 @@ private:
     Node* head;
     int currentLevel;
 
-    int radomLevel(){
+    int randomLevel(){
         int level = 1;
         while( ((float)rand() / RAND_MAX) < P && level < MAX){
             level++;
@@ -154,7 +154,7 @@ public:
             }
             update[lvl] = x;
         }
-        int lvl = radomLevel();
+        int lvl = randomLevel();
         if(lvl > currentLevel){
             for(int i = currentLevel; i < lvl; ++i){
                 update[i] = head;
