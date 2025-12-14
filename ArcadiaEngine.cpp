@@ -50,24 +50,148 @@ class ConcreteLeaderboard : public Leaderboard {
 private:
     // TODO: Define your skip list node structure and necessary variables
     // Hint: You'll need nodes with multiple forward pointers
+    struct Node{
+        int ID;
+        int score;
+        int lvl;
+        vector<Node*> next;
+
+        Node(int id, int sc, int level) : ID(id), score(sc), lvl(level), next(level, nullptr) {}
+    };
+
+    static const int MAX = 16;
+    static constexpr float P = 0.5f;
+
+    Node* head;
+    int currentLevel;
+
+    int radomLevel(){
+        int level = 1;
+        while( ((float)rand() / RAND_MAX) < P && level < MAX){
+            level++;
+        }
+        return level;
+    }
+
+    bool lessThan(Node* a , int id, int sc){
+        if (a->score != sc){
+            return a->score > sc;
+        }
+        return a->ID < id;
+    }
+
+    bool equalKey(Node* a, int id ,int sc){
+        return a->score == sc && a->ID == id;
+    }
+
+    Node* findWithScore(int id, int sc, vector<Node*>& update){
+        Node* x = head;
+        for(int lvl = currentLevel -1; lvl >=0; lvl--){
+            while (x->next[lvl] && lessThan(x->next[lvl], id, sc)){
+                x = x->next[lvl];
+            }
+            update[lvl] = x;
+        }
+        x = x->next[0];
+        if(x && equalKey(x,id,sc)) return x;
+        return nullptr;
+    }
+
+    void deleteNode(Node* target){
+        vector<Node*> update(MAX, nullptr);
+        Node* x = head;
+        int id = target->ID;
+        int sc = target->score;
+        for(int lvl = currentLevel - 1; lvl >=0; --lvl){
+            while(x->next[lvl] && lessThan(x->next[lvl], id, sc)){
+                x = x->next[lvl];
+            }
+            update[lvl] = x;
+        }
+        for(int lvl = 0; lvl < currentLevel; ++lvl){
+            if( update[lvl]->next[lvl]==target){
+                update[lvl]->next[lvl] = target->next[lvl];
+            }
+        }
+        delete target;
+        while( currentLevel > 1 && head->next[currentLevel- 1] == nullptr){
+            currentLevel--;
+        }
+    }
 
 public:
     ConcreteLeaderboard() {
         // TODO: Initialize your skip list
+        head = new Node(-1,0, MAX);
+        currentLevel = 1;
+        srand(1);
     }
 
     void addScore(int playerID, int score) override {
         // TODO: Implement skip list insertion
         // Remember to maintain descending order by score
+        Node* cur = head->next[0];
+        Node* found = nullptr;
+        while(cur){
+            if(cur->ID == playerID){
+                found = cur;
+                break;
+            }
+            cur = cur->next[0];
+        }
+        if(found){
+            deleteNode(found);
+        }
+        vector<Node*> update(MAX, nullptr);
+        Node* x = head;
+        for(int lvl = currentLevel - 1; lvl >=0; --lvl){
+            while(x->next[lvl] && 
+                (x->next[lvl]->score > score ||
+                (x->next[lvl]->score == score && 
+                x->next[lvl]->ID < playerID)))
+            {
+                x = x->next[lvl];
+            }
+            update[lvl] = x;
+        }
+        int lvl = radomLevel();
+        if(lvl > currentLevel){
+            for(int i = currentLevel; i < lvl; ++i){
+                update[i] = head;
+            }
+            currentLevel = lvl;
+        }
+        Node* newNode = new Node(playerID, score, lvl);
+        for(int i = 0; i < lvl; ++i){
+            newNode->next[i] = update[i]->next[i];
+            update[i]->next[i] = newNode;
+        }
     }
 
     void removePlayer(int playerID) override {
         // TODO: Implement skip list deletion
+        Node* cur = head->next[0];
+        Node* target = nullptr;
+        while(cur){
+            if(cur->ID == playerID){
+                target = cur;
+                break;
+            }
+            cur = cur->next[0];
+        }
+        if (!target) return;
+        deleteNode(target);
     }
 
     vector<int> getTopN(int n) override {
         // TODO: Return top N player IDs in descending score order
-        return {};
+        vector<int> result;
+        Node* cur = head->next[0];
+        while(cur && (int)result.size() < n){
+            result.push_back(cur->ID);
+            cur = cur->next[0];
+        }
+        return result;
     }
 };
 
