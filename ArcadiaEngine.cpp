@@ -647,54 +647,50 @@ string WorldNavigator::sumMinDistancesBinary(int n, vector<vector<int>>& roads) 
     // Sum all shortest distances between unique pairs (i < j)
     // Return the sum as a binary string
     // Hint: Handle large numbers carefully
-        const long long INF = LLONG_MAX / 4;
+    const long long INF = LLONG_MAX / 4;
 
-    // distance matrix
-    vector<vector<long long>> dist(n, vector<long long>(n, INF));
-
-    // distance to self = 0
-    for (int i = 0; i < n; i++)
-        dist[i][i] = 0;
-
-    // initialize roads
-    for (auto& r : roads) {
-        int u = r[0];
-        int v = r[1];
-        long long w = r[2];
-        dist[u][v] = min(dist[u][v], w);
-        dist[v][u] = min(dist[v][u], w);
+    vector<vector<pair<int,int>>> adj(n);
+    for (auto &r : roads) {
+        int u = r[0], v = r[1], w = r[2];
+        adj[u].push_back({v, w});
+        adj[v].push_back({u, w});
     }
 
-    // Floyd-Warshall
-    for (int k = 0; k < n; k++) {
-        for (int i = 0; i < n; i++) {
-            if (dist[i][k] == INF) continue;
-            for (int j = 0; j < n; j++) {
-                if (dist[k][j] == INF) continue;
-                dist[i][j] = min(dist[i][j], dist[i][k] + dist[k][j]);
+    long long sum = 0;
+
+    // run Dijkstra from each node
+    for (int s = 0; s < n; ++s) {
+        vector<long long> dist(n, INF);
+        dist[s] = 0;
+        using P = pair<long long,int>;
+        priority_queue<P, vector<P>, greater<P>> pq;
+        pq.push({0, s});
+
+        while (!pq.empty()) {
+            auto [d, u] = pq.top(); pq.pop();
+            if (d != dist[u]) continue;
+            for (auto [v, w] : adj[u]) {
+                if (dist[v] > d + w) {
+                    dist[v] = d + w;
+                    pq.push({dist[v], v});
+                }
             }
         }
-    }
 
-    // sum all i < j
-    long long sum = 0;
-    for (int i = 0; i < n; i++) {
-        for (int j = i + 1; j < n; j++) {
-            if (dist[i][j] != INF)
-                sum += dist[i][j];
+        // only sum pairs (s, j) with s < j to avoid double-counting
+        for (int j = s + 1; j < n; ++j) {
+            if (dist[j] != INF)
+                sum += dist[j];
         }
     }
 
-    // convert sum to binary
     if (sum == 0) return "0";
-
-    string binary = "";
+    string binary;
     while (sum > 0) {
-        binary.push_back((sum & 1) + '0');
+        binary.push_back(char('0' + (sum & 1)));
         sum >>= 1;
     }
     reverse(binary.begin(), binary.end());
-
     return binary;
 }
 
