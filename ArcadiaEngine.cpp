@@ -545,7 +545,26 @@ long long InventorySystem::countStringPossibilities(string s) {
     // Rules: "uu" can be decoded as "w" or "uu"
     //        "nn" can be decoded as "m" or "nn"
     // Count total possible decodings
-    return 0;
+    const long long MOD = 1000000007;
+    int n = s.size();
+
+    vector<long long> dp(n + 1, 0);
+    dp[n] = 1; // base case
+
+    for (int i = n - 1; i >= 0; i--) {
+        // take single character
+        dp[i] = dp[i + 1];
+
+        // take pair if valid
+        if (i + 1 < n) {
+            if ((s[i] == 'u' && s[i + 1] == 'u') ||
+                (s[i] == 'n' && s[i + 1] == 'n')) {
+                dp[i] = (dp[i] + dp[i + 2]) % MOD;
+            }
+        }
+    }
+
+    return dp[0];
 }
 
 // =========================================================
@@ -662,3 +681,4 @@ extern "C" {
         return new ConcreteAuctionTree(); 
     }
 }
+
