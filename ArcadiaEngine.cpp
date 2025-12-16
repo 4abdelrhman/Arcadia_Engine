@@ -564,7 +564,40 @@ long long WorldNavigator::minBribeCost(int n, int m, long long goldRate, long lo
     // roadData[i] = {u, v, goldCost, silverCost}
     // Total cost = goldCost * goldRate + silverCost * silverRate
     // Return -1 if graph cannot be fully connected
-    return -1;
+    vector<tuple<long long, int, int>> edges;
+    for (auto& r : roadData) {
+        long long cost = r[2] * goldRate + r[3] * silverRate;
+        edges.push_back({cost, r[0], r[1]});
+    }
+    sort(edges.begin(), edges.end());
+    vector<int> parent(n), rank(n, 0);
+    for (int i = 0; i < n; i++) parent[i] = i;
+    auto find = [&](int x) {
+        while (parent[x] != x) {
+            parent[x] = parent[parent[x]];
+            x = parent[x];
+        }
+        return x;
+    };
+    auto unite = [&](int a, int b) {
+        a = find(a);
+        b = find(b);
+        if (a == b) return false;
+        if (rank[a] < rank[b]) swap(a, b);
+        parent[b] = a;
+        if (rank[a] == rank[b]) rank[a]++;
+        return true;
+    };
+    long long total = 0;
+    int used = 0;
+    for (auto& [cost, u, v] : edges) {
+        if (unite(u, v)) {
+            total += cost;
+            used++;
+            if (used == n - 1) break;
+        }
+    }
+    return (used == n - 1) ? total : -1;
 }
 
 string WorldNavigator::sumMinDistancesBinary(int n, vector<vector<int>>& roads) {
