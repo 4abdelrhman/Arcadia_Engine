@@ -24,25 +24,66 @@ using namespace std;
 
 class ConcretePlayerTable : public PlayerTable {
 private:
-    // TODO: Define your data structures here
-    // Hint: You'll need a hash table with double hashing collision resolution
+    static const int TABLE_SIZE = 101;
+
+    struct Entry {
+        int playerID;
+        string name;
+        bool occupied;
+
+        Entry() : playerID(0), name(""), occupied(false) {}
+    };
+
+    vector<Entry> table;
+
+    int hash1(int key) {
+        return key % TABLE_SIZE;
+    }
+
+    int hash2(int key) {
+        return 1 + (key % (TABLE_SIZE - 1));
+    }
 
 public:
     ConcretePlayerTable() {
-        // TODO: Initialize your hash table
+        table.resize(TABLE_SIZE);
     }
 
     void insert(int playerID, string name) override {
-        // TODO: Implement double hashing insert
-        // Remember to handle collisions using h1(key) + i * h2(key)
+        int index1 = hash1(playerID);
+        int step   = hash2(playerID);
+
+        for (int i = 0; i < TABLE_SIZE; i++) {
+            int index = (index1 + i * step) % TABLE_SIZE;
+
+            if (!table[index].occupied) {
+                table[index].playerID = playerID;
+                table[index].name = name;
+                table[index].occupied = true;
+                return;
+            }
+        }
+
+        cout << "Table is full\n";
     }
 
     string search(int playerID) override {
-        // TODO: Implement double hashing search
-        // Return "" if player not found
+        int index1 = hash1(playerID);
+        int step   = hash2(playerID);
+
+        for (int i = 0; i < TABLE_SIZE; i++) {
+            int index = (index1 + i * step) % TABLE_SIZE;
+
+            if (!table[index].occupied)
+                return "";
+
+            if (table[index].playerID == playerID)
+                return table[index].name;
+        }
         return "";
     }
 };
+
 
 // --- 2. Leaderboard (Skip List) ---
 
@@ -125,6 +166,14 @@ public:
         head = new Node(-1,0, MAX);
         currentLevel = 1;
         srand(1);
+    }
+    ~ConcreteLeaderboard() {
+        Node* cur = head;
+        while (cur != nullptr) {
+            Node* next = cur->next[0];
+            delete cur;
+            cur = next;
+        }
     }
 
     void addScore(int playerID, int score) override {
@@ -216,12 +265,19 @@ struct Node {
         }
     
 };
+
 class ConcreteAuctionTree : public AuctionTree {
 private:
     // TODO: Define your Red-Black Tree node structure
     // Hint: Each node needs: id, price, color, left, right, parent pointers
     Node* root;
 
+    void deleteSubtree(Node* node) {
+        if (!node) return;
+        deleteSubtree(node->left);
+        deleteSubtree(node->right);
+        delete node;
+    }
     // helper functions
     void leftRotate(Node* x){
         Node* y = x->right;
@@ -473,6 +529,10 @@ public:
         root = nullptr;
     }
 
+    ~ConcreteAuctionTree() {
+        deleteSubtree(root);
+    }
+
     void insertItem(int itemID, int price) override {
         // TODO: Implement Red-Black Tree insertion
         // Remember to maintain RB-Tree properties with rotations and recoloring
@@ -560,7 +620,23 @@ int InventorySystem::maximizeCarryValue(int capacity, vector<pair<int, int>>& it
     // TODO: Implement 0/1 Knapsack using DP
     // items = {weight, value} pairs
     // Return maximum value achievable within capacity
-    return 0;
+
+    int n = items.size();
+    vector<vector<int>> dp(n + 1, vector<int>(capacity + 1, 0));
+    for (int i = 1; i <= n; i++) {
+        int weight = items[i - 1].first;
+        int value = items[i - 1].second;
+
+        for (int w = 1; w <= capacity; w++) {
+            if (weight <= w) {
+                dp[i][w] = max(dp[i - 1][w], dp[i - 1][w - weight] + value);
+            }
+            else {
+                dp[i][w] = dp[i - 1][w];
+            }
+        }
+    }
+        return dp[n][capacity];
 }
 
 long long InventorySystem::countStringPossibilities(string s) {
@@ -595,13 +671,40 @@ long long InventorySystem::countStringPossibilities(string s) {
 // =========================================================
 
 bool WorldNavigator::pathExists(int n, vector<vector<int>>& edges, int source, int dest) {
-    // TODO: Implement path existence check using BFS or DFS
-    // edges are bidirectional
+    if (source == dest)
+        return true;
+
+    vector<vector<int>> adj(n);
+    for (auto& e : edges) {
+        int u = e[0];
+        int v = e[1];
+        adj[u].push_back(v);
+        adj[v].push_back(u);
+    }
+
+    vector<bool> visited(n, false);
+    queue<int> q;
+    q.push(source);
+    visited[source] = true;
+
+    while (!q.empty()) {
+        int u = q.front();
+        q.pop();
+
+        if (u == dest) return true;
+
+        for (int v : adj[u]) {
+            if (!visited[v]) {
+                visited[v] = true;
+                q.push(v);
+            }
+        }
+    }
+
     return false;
 }
 
-long long WorldNavigator::minBribeCost(int n, int m, long long goldRate, long long silverRate,
-                                       vector<vector<int>>& roadData) {
+long long WorldNavigator::minBribeCost(int n, int m, long long goldRate, long long silverRate,vector<vector<int>>& roadData) {
     // TODO: Implement Minimum Spanning Tree (Kruskal's or Prim's)
     // roadData[i] = {u, v, goldCost, silverCost}
     // Total cost = goldCost * goldRate + silverCost * silverRate
@@ -745,5 +848,215 @@ extern "C" {
     }
 }
 
+/**
+ * main_test_student.cpp
+ * Basic "Happy Path" Test Suite for ArcadiaEngine
+ * Use this to verify your basic logic against the assignment examples.
+ */
+
+#include <iostream>
+#include <vector>
+#include <string>
+#include <iomanip>
+#include <functional>
+#include "ArcadiaEngine.h" 
+
+using namespace std;
+
+// ==========================================
+// FACTORY FUNCTIONS (LINKING)
+// ==========================================
+// These link to the functions at the bottom of your .cpp file
+extern "C" {
+    PlayerTable* createPlayerTable();
+    Leaderboard* createLeaderboard();
+    AuctionTree* createAuctionTree();
+}
+
+// ==========================================
+// TEST UTILITIES
+// ==========================================
+class StudentTestRunner {
+	int count = 0;
+    int passed = 0;
+    int failed = 0;
+
+public:
+    void runTest(string testName, bool condition) {
+		count++;
+        cout << "TEST: " << left << setw(50) << testName;
+        if (condition) {
+            cout << "[ PASS ]";
+            passed++;
+        } else {
+            cout << "[ FAIL ]";
+            failed++;
+        }
+        cout << endl;
+    }
+
+    void printSummary() {
+        cout << "\n==========================================" << endl;
+        cout << "SUMMARY: Passed: " << passed << " | Failed: " << failed << endl;
+        cout << "==========================================" << endl;
+		cout << "TOTAL TESTS: " << count << endl;
+        if (failed == 0) {
+            cout << "Great job! All basic scenarios passed." << endl;
+            cout << "Now make sure to handle edge cases (empty inputs, collisions, etc.)!" << endl;
+        } else {
+            cout << "Some basic tests failed. Check your logic against the PDF examples." << endl;
+        }
+    }
+};
+
+StudentTestRunner runner;
+
+// ==========================================
+// PART A: DATA STRUCTURES
+// ==========================================
+
+void test_PartA_DataStructures() {
+    cout << "\n--- Part A: Data Structures ---" << endl;
+
+    // 1. PlayerTable (Double Hashing)
+    // Requirement: Basic Insert and Search
+    PlayerTable* table = createPlayerTable();
+    runner.runTest("PlayerTable: Insert 'Alice' and Search", [&]() {
+        table->insert(101, "Alice");
+        return table->search(101) == "Alice";
+    }());
+    delete table;
+
+    // 2. Leaderboard (Skip List)
+    Leaderboard* board = createLeaderboard();
+
+    // Test A: Basic High Score
+    runner.runTest("Leaderboard: Add Scores & Get Top 1", [&]() {
+        board->addScore(1, 100);
+        board->addScore(2, 200); // 2 is Leader
+        vector<int> top = board->getTopN(1);
+        return (!top.empty() && top[0] == 2);
+    }());
+
+    // Test B: Tie-Breaking Visual Example (Crucial!)
+    // PDF Visual Example: Player A (ID 10) 500pts, Player B (ID 20) 500pts.
+    // Correct Order: ID 10 then ID 20.
+    runner.runTest("Leaderboard: Tie-Break (ID 10 before ID 20)", [&]() {
+        board->addScore(10, 500);
+        board->addScore(20, 500);
+        vector<int> top = board->getTopN(2);
+        // We expect {10, 20} NOT {20, 10}
+        if (top.size() < 2) return false;
+        return (top[0] == 10 && top[1] == 20); 
+    }());
+    
+    delete board;
+
+    // 3. AuctionTree (Red-Black Tree)
+    // Requirement: Insert items without crashing
+    AuctionTree* tree = createAuctionTree();
+    runner.runTest("AuctionTree: Insert Items", [&]() {
+        tree->insertItem(1, 100);
+        tree->insertItem(2, 50);
+        return true; // Pass if no crash
+    }());
+    delete tree;
+}
+
+// ==========================================
+// PART B: INVENTORY SYSTEM
+// ==========================================
+
+void test_PartB_Inventory() {
+    cout << "\n--- Part B: Inventory System ---" << endl;
+
+    // 1. Loot Splitting (Partition)
+    // PDF Example: coins = {1, 2, 4} -> Best split {4} vs {1,2} -> Diff 1
+    runner.runTest("LootSplit: {1, 2, 4} -> Diff 1", [&]() {
+        vector<int> coins = {1, 2, 4};
+        return InventorySystem::optimizeLootSplit(3, coins) == 1;
+    }());
+
+    // 2. Inventory Packer (Knapsack)
+    // PDF Example: Cap=10, Items={{1,10}, {2,20}, {3,30}}. All fit. Value=60.
+    runner.runTest("Knapsack: Cap 10, All Fit -> Value 60", [&]() {
+        vector<pair<int, int>> items = {{1, 10}, {2, 20}, {3, 30}};
+        return InventorySystem::maximizeCarryValue(10, items) == 60;
+    }());
+
+    // 3. Chat Autocorrect (String DP)
+    // PDF Example: "uu" -> "uu" or "w" -> 2 possibilities
+    runner.runTest("ChatDecorder: 'uu' -> 2 Possibilities", [&]() {
+        return InventorySystem::countStringPossibilities("uu") == 2;
+    }());
+}
+
+// ==========================================
+// PART C: WORLD NAVIGATOR
+// ==========================================
+
+void test_PartC_Navigator() {
+    cout << "\n--- Part C: World Navigator ---" << endl;
+
+    // 1. Safe Passage (Path Exists)
+    // PDF Example: 0-1, 1-2. Path 0->2 exists.
+    runner.runTest("PathExists: 0->1->2 -> True", [&]() {
+        vector<vector<int>> edges = {{0, 1}, {1, 2}};
+        return WorldNavigator::pathExists(3, edges, 0, 2) == true;
+    }());
+
+    // 2. The Bribe (MST)
+    // PDF Example: 3 Nodes. Roads: {0,1,10}, {1,2,5}, {0,2,20}. Rate=1.
+    // MST should pick 10 and 5. Total 15.
+    runner.runTest("MinBribeCost: Triangle Graph -> Cost 15", [&]() {
+        vector<vector<int>> roads = {
+            {0, 1, 10, 0}, 
+            {1, 2, 5, 0}, 
+            {0, 2, 20, 0}
+        };
+        // n=3, m=3, goldRate=1, silverRate=1
+        return WorldNavigator::minBribeCost(3, 3, 1, 1, roads) == 15;
+    }());
+
+    // 3. Teleporter (Binary Sum APSP)
+    // PDF Example: 0-1 (1), 1-2 (2). Distances: 1, 2, 3. Sum=6 -> "110"
+    runner.runTest("BinarySum: Line Graph -> '110'", [&]() {
+        vector<vector<int>> roads = {
+            {0, 1, 1},
+            {1, 2, 2}
+        };
+        return WorldNavigator::sumMinDistancesBinary(3, roads) == "110";
+    }());
+}
+
+// ==========================================
+// PART D: SERVER KERNEL
+// ==========================================
+
+void test_PartD_Kernel() {
+    cout << "\n--- Part D: Server Kernel ---" << endl;
+
+    // 1. Task Scheduler
+    // PDF Example: Tasks={A, A, B}, n=2.
+    // Order: A -> B -> idle -> A. Total intervals: 4.
+    runner.runTest("Scheduler: {A, A, B}, n=2 -> 4 Intervals", [&]() {
+        vector<char> tasks = {'A', 'A', 'B'};
+        return ServerKernel::minIntervals(tasks, 2) == 4;
+    }());
+}
+
+int main() {
+    cout << "Arcadia Engine - Student Happy Path Tests" << endl;
+    cout << "-----------------------------------------" << endl;
+
+    test_PartA_DataStructures();
+    test_PartB_Inventory();
+    test_PartC_Navigator();
+    test_PartD_Kernel();
+
+    runner.printSummary();
+
+    return 0;
+}
 
 
