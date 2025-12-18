@@ -647,6 +647,9 @@ long long InventorySystem::countStringPossibilities(string s) {
 // =========================================================
 
 bool WorldNavigator::pathExists(int n, vector<vector<int>>& edges, int source, int dest) {
+    if (source < 0 || dest < 0 || source >= n || dest >= n)
+        return false;
+
     if (source == dest)
         return true;
 
@@ -667,16 +670,15 @@ bool WorldNavigator::pathExists(int n, vector<vector<int>>& edges, int source, i
         int u = q.front();
         q.pop();
 
-        if (u == dest) return true;
-
         for (int v : adj[u]) {
             if (!visited[v]) {
+                if (v == dest) return true;
                 visited[v] = true;
                 q.push(v);
             }
         }
     }
-
+    
     return false;
 }
 
