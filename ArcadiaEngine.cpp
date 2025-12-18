@@ -56,15 +56,22 @@ public:
         for (int i = 0; i < TABLE_SIZE; i++) {
             int index = (index1 + i * step) % TABLE_SIZE;
 
+            if (table[index].occupied && table[index].playerID == playerID) {
+                table[index].name = name; // UPDATE
+                return;
+            }
+
             if (!table[index].occupied) {
                 table[index].playerID = playerID;
                 table[index].name = name;
                 table[index].occupied = true;
                 return;
             }
+
         }
 
-        cout << "Table is full\n";
+        cout << "Table is Full" << endl;
+
     }
 
     string search(int playerID) override {
@@ -606,6 +613,13 @@ long long InventorySystem::countStringPossibilities(string s) {
     // Rules: "uu" can be decoded as "w" or "uu"
     //        "nn" can be decoded as "m" or "nn"
     // Count total possible decodings
+    if (s.empty()) return 1;
+
+    for (char c : s) {
+        if (c == 'w' || c == 'm')
+            return 0;
+    }
+
     const long long MOD = 1000000007;
     int n = s.size();
 
@@ -722,7 +736,7 @@ string WorldNavigator::sumMinDistancesBinary(int n, vector<vector<int>>& roads) 
     for (auto& r : roads) {
         int u = r[0];
         int v = r[1];
-        long long w = r[2];
+        long long w = 1LL << r[2];
         dist[u][v] = min(dist[u][v], w);
         dist[v][u] = min(dist[v][u], w);
     }
@@ -764,8 +778,9 @@ int ServerKernel::minIntervals(vector<char>& tasks, int n) {
     // Same task must wait 'n' intervals before running again
     // Return minimum total intervals needed (including idle time)
     // Hint: Use greedy approach with frequency counting
-
+    
     // freq for each task
+
     vector<int> freq(26,0);
     for (char c : tasks){
         freq[c-'A']++;
