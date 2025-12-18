@@ -114,56 +114,10 @@ private:
         return level;
     }
 
-    bool lessThan(Node* a , int id, int sc){
-        if (a->score != sc){
-            return a->score > sc;
-        }
-        return a->ID < id;
-    }
-
-    bool equalKey(Node* a, int id ,int sc){
-        return a->score == sc && a->ID == id;
-    }
-
-    Node* findWithScore(int id, int sc, vector<Node*>& update){
-        Node* x = head;
-        for(int lvl = currentLevel -1; lvl >=0; lvl--){
-            while (x->next[lvl] && lessThan(x->next[lvl], id, sc)){
-                x = x->next[lvl];
-            }
-            update[lvl] = x;
-        }
-        x = x->next[0];
-        if(x && equalKey(x,id,sc)) return x;
-        return nullptr;
-    }
-
-    void deleteNode(Node* target){
-        vector<Node*> update(MAX, nullptr);
-        Node* x = head;
-        int id = target->ID;
-        int sc = target->score;
-        for(int lvl = currentLevel - 1; lvl >=0; --lvl){
-            while(x->next[lvl] && lessThan(x->next[lvl], id, sc)){
-                x = x->next[lvl];
-            }
-            update[lvl] = x;
-        }
-        for(int lvl = 0; lvl < currentLevel; ++lvl){
-            if( update[lvl]->next[lvl]==target){
-                update[lvl]->next[lvl] = target->next[lvl];
-            }
-        }
-        delete target;
-        while( currentLevel > 1 && head->next[currentLevel- 1] == nullptr){
-            currentLevel--;
-        }
-    }
-
 public:
     ConcreteLeaderboard() {
         // TODO: Initialize your skip list
-        head = new Node(-1,0, MAX);
+        head = new Node(-1,INT_MAX, MAX);
         currentLevel = 1;
         srand(1);
     }
@@ -179,18 +133,6 @@ public:
     void addScore(int playerID, int score) override {
         // TODO: Implement skip list insertion
         // Remember to maintain descending order by score
-        Node* cur = head->next[0];
-        Node* found = nullptr;
-        while(cur){
-            if(cur->ID == playerID){
-                found = cur;
-                break;
-            }
-            cur = cur->next[0];
-        }
-        if(found){
-            deleteNode(found);
-        }
         vector<Node*> update(MAX, nullptr);
         Node* x = head;
         for(int lvl = currentLevel - 1; lvl >=0; --lvl){
@@ -229,7 +171,27 @@ public:
             cur = cur->next[0];
         }
         if (!target) return;
-        deleteNode(target);
+        vector<Node*> update(MAX, nullptr);
+        Node* x = head;
+
+        for(int lvl = currentLevel - 1; lvl >=0; --lvl){
+            while(x->next[lvl] && 
+                (x->next[lvl]->score > target->score ||
+                (x->next[lvl]->score == target->score && x->next[lvl]->ID < target->ID)))
+                {
+                    x = x->next[lvl];
+                }
+            update[lvl] = x;
+        }
+        for(int lvl = 0; lvl < currentLevel; ++lvl){
+            if(update[lvl]->next[lvl] == target){
+                update[lvl]->next[lvl] = target->next[lvl];
+            }
+        }
+        delete target;
+        while(currentLevel > 1 && head->next[currentLevel - 1] == nullptr){
+            currentLevel--;
+        }
     }
 
     vector<int> getTopN(int n) override {
